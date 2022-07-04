@@ -1,16 +1,18 @@
 package com.example.demospringbootopencsv;
 
-import com.opencsv.CSVWriter;
+import com.opencsv.*;
 import com.opencsv.bean.StatefulBeanToCsv;
 import com.opencsv.bean.StatefulBeanToCsvBuilder;
 import com.opencsv.exceptions.CsvDataTypeMismatchException;
 import com.opencsv.exceptions.CsvRequiredFieldEmptyException;
+import com.opencsv.exceptions.CsvValidationException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import static com.opencsv.ICSVWriter.*;
@@ -70,6 +72,67 @@ public class OpenCsvTools {
             log.error("OpenCsvTools getHeaderForFile: "+e.getMessage());
         }
         return new String[0];
+    }
+
+    public static CSVParser getParser(char separator) {
+        return new CSVParserBuilder()
+                .withSeparator(separator)
+                .withEscapeChar(DEFAULT_ESCAPE_CHARACTER)
+                .withQuoteChar(NO_QUOTE_CHARACTER)
+                .build();
+    }
+
+    public static CSVParser getParser() {
+        return getParser(';');
+    }
+
+    // Check if column size for each row is equal to column size of header
+    // TODO create output file with bad content
+    public static boolean checkColumnSizeFromFile(String pathFile) {
+        boolean output = true;
+
+        File fileToCheck = new File(pathFile);
+
+        HashMap<Integer,LineInFile> contentFile = new HashMap<>();
+        HashMap<Integer,LineInFile> badContentFile = new HashMap<>();
+        int nbLine = 0;
+        int nbColumn = 0;
+        String[] line;
+
+        CSVParser parser = OpenCsvTools.getParser();
+
+        try (CSVReader reader = new CSVReaderBuilder(new FileReader(fileToCheck))
+                .withCSVParser(parser)
+                .build()
+        ) {
+
+            while ( (line = reader.readNext()) != null ) {
+                if (nbLine == 0) { // 1ere ligne
+                    nbColumn = line.length; // on prend le nombre de colonne de l'entête
+                }
+                if (nbColumn != line.length) { //bad content
+                    badContentFile.put(nbLine, new LineInFile(line, line.length));
+                    output = false;
+                } else { // nbColumn ok
+                    contentFile.put(nbLine, new LineInFile(line, line.length));
+                }
+                nbLine++;
+            }
+
+        } catch (FileNotFoundException e) { //FileReader
+            throw new RuntimeException(e);
+        } catch (IOException e) { //FileReader
+            throw new RuntimeException(e);
+        } catch (CsvValidationException e) { //readNext()
+            throw new RuntimeException(e);
+        }
+
+        log.info("checkColumnSizeFromFile - Nb_lines:"+nbLine);
+        log.info("checkColumnSizeFromFile - Nb_column:"+nbColumn);
+        log.info("checkColumnSizeFromFile - Size_content:"+contentFile.size()+" (must be equal to Nb_lines if no error)");
+        log.info("checkColumnSizeFromFile - Size_error:"+badContentFile.size());
+
+        return output;
     }
 
 }

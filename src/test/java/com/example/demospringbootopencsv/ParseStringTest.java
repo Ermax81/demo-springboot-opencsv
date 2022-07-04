@@ -29,11 +29,7 @@ public class ParseStringTest {
         //String line = "1;john;doe;john.doe";
         String line = "1;john;doe;john.doe@nomail.com";
 
-        CSVParser parser = new CSVParserBuilder()
-                .withSeparator(';')
-                .withEscapeChar(DEFAULT_ESCAPE_CHARACTER)
-                .withQuoteChar(NO_QUOTE_CHARACTER)
-                .build();
+        CSVParser parser = OpenCsvTools.getParser();
 
         try {
             String[] items = parser.parseLine(line);
